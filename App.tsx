@@ -838,8 +838,8 @@ export default function App() {
   };
 
   const hazardOptions = [
-    { id: "embers", label: "Embers" },
-    { id: "firePerimeters", label: "Fire Perimeters" },
+    { id: "embers", label: selectedTab === 'outage' ? 'Outage Probability' : 'Fire Ignition' },
+    { id: "firePerimeters", label: selectedTab === 'outage' ? 'Residents Impacted' : 'Wind Risk' },
   ];
 
   const modelOptions = [
@@ -1185,6 +1185,10 @@ export default function App() {
 
   const currentRiskData = selectedTab === "outage" ? outageRiskData : riskData;
   const currentPeakData = (selectedTab === "outage" ? outagePeakSystemData : peakSystemData)[(selectedHazard as 'Embers' | 'Fire Perimeters')];
+  const HAZARD_DISPLAY_LABEL: Record<'Embers' | 'Fire Perimeters', string> = {
+    Embers: selectedTab === 'outage' ? 'Outage Probability' : 'Fire Ignition',
+    'Fire Perimeters': selectedTab === 'outage' ? 'Residents Impacted' : 'Wind Risk',
+  };
   
   // Track expanded scenario rows in Peak System table
   const [expandedScenarioNames, setExpandedScenarioNames] = useState<Record<string, boolean>>({});
@@ -1232,7 +1236,7 @@ export default function App() {
   
   // Shared layout constants to keep both tables aligned and visible without horizontal scrolling
   const LABEL_COL_WIDTH = 200; // px - left column width for both tables (more compact)
-  const DAY_COL_WIDTH = 86;    // px - day column width for both tables (fits without scroll)
+  const DAY_COL_WIDTH = 82;    // px - day column width for both tables (fits without scroll)
   const PEAK_DAY_INDEXES = [0, 1, 2, 3, 4]; // Show 5 days
 
   // Tooltip helpers
@@ -1630,9 +1634,9 @@ export default function App() {
           </div>
 
           {/* Right Side - Control Panel */}
-          <div className="h-full overflow-x-clip overflow-y-auto relative rounded shrink-0 w-[916px]">
+          <div className="h-full overflow-x-clip overflow-y-auto relative rounded shrink-0 w-[710px]">
             {/* Objectives Card (now on right side, above controls) */}
-            <div className="absolute left-0 top-0 w-[916px] z-0">
+            <div className="absolute left-0 top-0 w-[710px] z-0">
               <div className="bg-card/95 border border-border rounded-md p-4 w-full">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-foreground text-[17px] font-semibold">Objectives</h3>
@@ -1640,19 +1644,19 @@ export default function App() {
                 <div className="space-y-4">
                   {/* Objective 1 */}
                   <div className="bg-white/5 rounded-md p-3">
-                    <div className="text-base font-semibold text-foreground mb-2">Prevent fire from reaching Front Street Corridor.</div>
+                    <div className="text-base font-semibold text-foreground mb-2">Disable all power lines.</div>
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2 cursor-pointer rounded-md px-2 py-1 hover:bg-white/10 hover:ring-1 hover:ring-white/15 transition-colors" onClick={() => setObjectiveModal({ type: 'ongoing', title: 'Deploy structure protection teams on perimeter', resources: ['2 Engine Companies', 'Structure Protection Kit'], projectedOutcome: 'Reduced structure loss in corridor; faster knockdown along edges.', rationale: 'Teams actively patrolling and wetting down at-risk structures along perimeter.' })}>
+                      <div className="flex items-center gap-2 cursor-pointer rounded-md px-2 py-1 hover:bg-white/10 hover:ring-1 hover:ring-white/15 transition-colors" onClick={() => setObjectiveModal({ type: 'ongoing', title: 'De-energize critical feeders serving Lahaina', resources: ['Utility Liaison', 'SCADA Operator', 'Field Line Crew'], projectedOutcome: 'Reduce ignition risk and improve responder safety; initial de-energization within 30–60 minutes.', rationale: 'High winds and active fire increase arcing risk. Remote sectionalizing possible; confirm in field.' })}>
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/10 text-xs">Ongoing</span>
-                        <span className="text-sm text-foreground">Deploy structure protection teams on perimeter</span>
+                        <span className="text-sm text-foreground">De-energize critical feeders serving Lahaina</span>
                       </div>
-                      <div className="flex items-center gap-2 cursor-pointer rounded-md px-2 py-1 hover:bg-white/10 hover:ring-1 hover:ring-white/15 transition-colors" onClick={() => setObjectiveModal({ type: 'ongoing', title: 'Maintain aerial bucket drops along north flank', resources: ['2 Helicopters', 'Fuel & Foam'], projectedOutcome: 'Slow spread on north flank within 1–2 hrs.', rationale: 'Aircraft operating in 15-min cycles; helibase established.' })}>
+                      <div className="flex items-center gap-2 cursor-pointer rounded-md px-2 py-1 hover:bg-white/10 hover:ring-1 hover:ring-white/15 transition-colors" onClick={() => setObjectiveModal({ type: 'ongoing', title: 'Establish Lockout/Tagout (LOTO) on opened circuits', resources: ['2 Line Crews', 'LOTO Kits', 'Dispatch Confirmation'], projectedOutcome: 'Prevent inadvertent re-energization; eliminate backfeed hazards to crews and public.', rationale: 'Apply LOTO at switches, reclosers, and substation breakers; verify with control center.' })}>
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/10 text-xs">Ongoing</span>
-                        <span className="text-sm text-foreground">Maintain aerial bucket drops along north flank</span>
+                        <span className="text-sm text-foreground">Establish Lockout/Tagout (LOTO) on opened circuits</span>
                       </div>
-                      <div className="flex items-center gap-2 mt-2 cursor-pointer rounded-md px-2 py-1 hover:bg-white/10 hover:ring-1 hover:ring-white/15 transition-colors" onClick={() => setObjectiveModal({ type: 'recommended', title: 'Cut 200 m firebreak near Front St. & Papalaua St.', resources: ['2 Dozers', 'Saw Teams', 'Water Tender'], projectedOutcome: 'Create holdable line protecting Front Street assets.', rationale: 'Proposed line follows existing dirt track; minimal cultural resource impact.' })}>
+                      <div className="flex items-center gap-2 mt-2 cursor-pointer rounded-md px-2 py-1 hover:bg-white/10 hover:ring-1 hover:ring-white/15 transition-colors" onClick={() => setObjectiveModal({ type: 'recommended', title: 'Open reclosers and isolate Lahaina substation feeders', resources: ['2 Line Crews', 'Bucket Truck', 'Access Keys'], projectedOutcome: 'Isolate the affected area and prevent automatic reclosing during the incident.', rationale: 'Manual open at field reclosers; confirm isolation via SCADA and field verification.' })}>
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#38b7fe]/15 text-[#38b7fe] text-xs">Recommended</span>
-                        <span className="text-sm text-foreground">Cut 200 m firebreak near Front St. &amp; Papalaua St.</span>
+                        <span className="text-sm text-foreground">Open reclosers and isolate Lahaina substation feeders</span>
                       </div>
                     </div>
                   </div>
@@ -1681,8 +1685,8 @@ export default function App() {
             {/* Controls removed as requested */}
 
             {/* Fire Hazard Analysis */}
-            <div className="absolute z-10 h-[170px] left-0 top-[464px] w-[916px]">
-              <div className="absolute bg-[#14171a] box-border content-stretch flex flex-row gap-2 items-center justify-start left-0 px-4 py-1 top-0 w-[916px]">
+            <div className="absolute z-10 h-[170px] left-0 top-[464px] w-[710px]">
+              <div className="absolute bg-[#14171a] box-border content-stretch flex flex-row gap-2 items-center justify-start left-0 px-4 py-1 top-0 w-[710px]">
                 <div className="box-border content-stretch flex flex-row gap-1 items-center justify-start p-0 relative shrink-0">
                   <div
                     className="font-['Open_Sans:SemiBold',_sans-serif] font-semibold leading-[0] relative shrink-0 text-[#ffffff] text-[16px] text-left text-nowrap"
@@ -1690,9 +1694,7 @@ export default function App() {
                       fontVariationSettings: "'wdth' 100",
                     }}
                   >
-                    <p className="block leading-[24px] whitespace-pre">
-                      Fire Hazard Analysis
-                    </p>
+                    <p className="block leading-[24px] whitespace-pre">{selectedTab === "outage" ? "Outage Analysis" : "Fire Hazard Analysis"}</p>
                   </div>
                 </div>
                 <div className="basis-0 flex flex-row grow items-center self-stretch shrink-0">
@@ -1714,7 +1716,7 @@ export default function App() {
               </div>
 
               {/* Table Data */}
-              <div className="absolute bg-[#14171a] box-border content-stretch flex flex-col gap-3 items-start justify-start left-0 p-4 pt-7 top-7 w-[916px]">
+              <div className="absolute bg-[#14171a] box-border content-stretch flex flex-col gap-3 items-start justify-start left-0 p-4 pt-7 top-7 w-[710px]">
                 {/* Header Row */}
                 <div className="box-border content-stretch flex flex-row items-center justify-start p-0 relative shrink-0 w-full">
                   <div className="box-border content-stretch flex flex-row items-center justify-start p-0 relative shrink-0" style={{ width: LABEL_COL_WIDTH }}>
@@ -1763,11 +1765,11 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Embers Row */}
+                {/* Fire Ignition / Outage Probability Row (formerly Embers) */}
                   <div className="box-border content-stretch flex flex-row items-center justify-start p-0 relative shrink-0 w-full">
                   <div className="box-border content-stretch flex flex-row items-center justify-start p-0 relative shrink-0" style={{ width: LABEL_COL_WIDTH }}>
                     <div className="font-['Open_Sans:SemiBold',_sans-serif] font-semibold leading-[0] relative shrink-0 text-[#ffffff] text-[14px] text-left text-nowrap" style={{fontVariationSettings: "'wdth' 100"}}>
-                      <p className="block leading-[20px] whitespace-pre">Embers</p>
+                      <p className="block leading-[20px] whitespace-pre">{selectedTab === 'outage' ? 'Outage Probability' : 'Fire Ignition'}</p>
                     </div>
                   </div>
                   <div className="basis-0 box-border content-stretch flex flex-row gap-3 grow items-center justify-start min-h-px min-w-px p-0 relative shrink-0">
@@ -1784,7 +1786,7 @@ export default function App() {
                               </TooltipTrigger>
                               <TooltipContent>
                                 <div className="text-xs">
-                                  <div className="font-semibold mb-1">Embers — DAY {dayIndex + 1}</div>
+                                  <div className="font-semibold mb-1">{selectedTab === 'outage' ? 'Outage Probability' : 'Fire Ignition'} — DAY {dayIndex + 1}</div>
                                   <div>Ignition Component (IC): {getIgnitionComponentFromColor(color)}</div>
                                   <div>Block: {threeHourBlocks[pillIndex % threeHourBlocks.length]}</div>
                                   <div>Date: {formatDayDate(dayIndex)}</div>
@@ -1798,11 +1800,11 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Fire Perimeters Row */}
+                {/* Wind Risk / Residents Impacted Row (formerly Fire Perimeters) */}
                 <div className="box-border content-stretch flex flex-row items-center justify-start p-0 relative shrink-0 w-full">
                   <div className="box-border content-stretch flex flex-row items-center justify-start p-0 relative shrink-0" style={{ width: LABEL_COL_WIDTH }}>
                     <div className="font-['Open_Sans:SemiBold',_sans-serif] font-semibold leading-[0] relative shrink-0 text-[#ffffff] text-[14px] text-left text-nowrap" style={{fontVariationSettings: "'wdth' 100"}}>
-                      <p className="block leading-[20px] whitespace-pre">Fire Perimeters</p>
+                      <p className="block leading-[20px] whitespace-pre">{selectedTab === 'outage' ? 'Residents Impacted' : 'Wind Risk'}</p>
                     </div>
                   </div>
                   <div className="basis-0 box-border content-stretch flex flex-row gap-3 grow items-center justify-start min-h-px min-w-px p-0 relative shrink-0">
@@ -1819,7 +1821,7 @@ export default function App() {
                               </TooltipTrigger>
                               <TooltipContent>
                                 <div className="text-xs">
-                                  <div className="font-semibold mb-1">Fire Perimeters — DAY {dayIndex + 1}</div>
+                                  <div className="font-semibold mb-1">{selectedTab === 'outage' ? 'Residents Impacted' : 'Wind Risk'} — DAY {dayIndex + 1}</div>
                                   <div>{getRateOfSpreadFromColor(color)}</div>
                                   <div>Block: {threeHourBlocks[pillIndex % threeHourBlocks.length]}</div>
                                   <div>Date: {formatDayDate(dayIndex)}</div>
@@ -1838,7 +1840,7 @@ export default function App() {
             </div>
 
             {/* Peak System Table */}
-            <div className="absolute z-10 h-[350px] left-0 top-[654px] w-[916px]">
+            <div className="absolute z-10 h-[350px] left-0 top-[654px] w-[710px]">
               {/* Peak System Table Title */}
               <div className="bg-[#14171a] relative z-20 shrink-0 w-full">
                 <div className="flex flex-row items-center relative size-full">
@@ -1850,7 +1852,7 @@ export default function App() {
                           fontVariationSettings: "'wdth' 100",
                         }}
                       >
-                        <p className="block leading-[24px] whitespace-pre mt-1">Rate of Spread (ROS) Scenarios</p>
+                        <p className="block leading-[24px] whitespace-pre mt-1">{selectedTab === 'outage' ? 'Outage Scenarios' : 'Ember Spread Scenarios'}</p>
                       </div>
                     </div>
                     <div className="basis-0 flex flex-row grow items-center self-stretch shrink-0">
@@ -1873,7 +1875,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="absolute bg-[#14171a] box-border content-stretch flex flex-col gap-3 items-start justify-start left-0 p-4 pt-7 top-7 w-[916px] z-10">
+              <div className="absolute bg-[#14171a] box-border content-stretch flex flex-col gap-3 items-start justify-start left-0 p-4 pt-7 top-7 w-[710px] z-10">
                 {/* Header */}
                 <div className="box-border content-stretch flex flex-row items-center justify-start p-0 relative shrink-0 w-full">
                   <div className="box-border content-stretch flex flex-row items-center justify-start p-0 relative shrink-0" style={{ width: LABEL_COL_WIDTH }}>
@@ -1950,7 +1952,7 @@ export default function App() {
                                   <TooltipContent>
                                     <div className="text-xs">
                                       <div className="font-semibold mb-1">{selectedHazard} — DAY {valueIndex + 1}</div>
-                                      <div>ROS: {formatRos(value, selectedHazard)}</div>
+                                      <div>{selectedTab === 'outage' ? '% Without Power' : 'ROS'}: {formatRos(value, selectedHazard)}</div>
                                       <div>Time Range: All-day</div>
                                       <div>Probability: {scenario.name}</div>
                                     </div>
@@ -2005,7 +2007,7 @@ export default function App() {
                                     <TooltipContent>
                                       <div className="text-xs">
                                         <div className="font-semibold mb-1">{child.name} — DAY {di + 1}</div>
-                                        <div>ROS: {formatRos(val, selectedHazard)}</div>
+                                        <div>{selectedTab === 'outage' ? '% Without Power' : 'ROS'}: {formatRos(val, selectedHazard)}</div>
                                         <div>Time Range: All-day</div>
                                         <div>Probability: {scenario.name}</div>
                                       </div>
