@@ -687,12 +687,15 @@ var riskSelectEl = document.getElementById('riskSelect');
 var fireSelectEl = document.getElementById('fireSelect');
 
 function listCandidateRiskKeys(){
-  // Generate YYYYMMDD_HHMM candidates around 08/07 and 08/08 hours commonly used
-  var days = ['20230807','20230808'];
-  var hours = ['1500','1530','1600','1700','1800','1900','2000','2100'];
-  var keys = [];
-  days.forEach(function(d){ hours.forEach(function(h){ keys.push(d+'_'+h); }); });
-  return keys;
+  // Explicit list of available risk files (21 options)
+  return [
+    '20230807_1800','20230807_1900','20230807_2000','20230807_2100','20230807_2200','20230807_2300',
+    '20230808_0000','20230808_0300','20230808_0600','20230808_1000','20230808_1400','20230808_1800',
+    '20230809_0000','20230809_0600','20230809_1200','20230809_1800',
+    '20230810_1800',
+    '20230811_0600','20230811_1800',
+    '20230812_0600','20230812_1800'
+  ];
 }
 
 function riskKeyToLabel(key){
