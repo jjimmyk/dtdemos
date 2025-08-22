@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="initial-scale=1, maximum-scale=1, width=device-width" />
+<title>Lahaina Data Map</title>
+<link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+<style>
+html, body, #viewDiv { padding: 0; margin: 0; height: 100%; width: 100%; }
+#timeSlider { display: none; }
+#timeSelectContainer { position: absolute; left: calc(12px + 100px); top: 12px; z-index: 6; background: rgba(255,255,255,0.9); padding: 6px 8px; border-radius: 4px; font: 14px system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+#timeSelect { display: none; }
+#timeButtons { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.timeBtn { padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; }
+.timeBtn.active { background: #0060ff; color: #fff; border-color: #0050d0; }
+.modeBtn { padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; }
+.modeBtn.active { background: #20262e; color: #fff; border-color: #20262e; }
+#riskStats { position: absolute; right: 12px; bottom: 12px; z-index: 7; background: rgba(255,255,255,0.94); padding: 8px 10px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.18); font: 13px system-ui, -apple-system, Segoe UI, Roboto, sans-serif; min-width: 220px; }
+#riskStats .title { font-weight: 600; margin-bottom: 6px; }
+#riskStats .kv { display: flex; justify-content: space-between; margin: 2px 0; }
+#riskStats .kv span:first-child { color: #444; }
+#riskStats .kv span:last-child { color: #000; font-variant-numeric: tabular-nums; }
+</style>
+<script src="https://js.arcgis.com/4.29/"></script>
+</head>
+<body>
+<div id="viewDiv"></div>
+<div id="timeSlider"></div>
+<div id="timeSelectContainer">
+  <div><strong>Data</strong></div>
+  <div id="dataModeContainer" style="margin-top:4px; display:flex; gap:6px;">
+    <button class="modeBtn active" data-mode="fire">Fire Behavior</button>
+    <button class="modeBtn" data-mode="risk">Risk Models</button>
+    <button class="modeBtn" data-mode="wind">Wind Models</button>
+  </div>
+  <div id="timeButtons" style="margin-top:6px; display:none;">
+    <button class="timeBtn" data-folder="20230808T1530">08/08/2023 15:30</button>
+    <button class="timeBtn" data-folder="20230808T1700">08/08/2023 17:00</button>
+    <button class="timeBtn" data-folder="20230808T1800">08/08/2023 18:00</button>
+  </div>
+  <div id="fireSelectContainer" style="display:none; margin-top:6px;">
+    <label for="fireSelect">Fire time:</label>
+    <select id="fireSelect"></select>
+  </div>
+  <div id="riskSelectContainer" style="display:none; margin-top:6px;">
+    <label for="riskSelect">Risk time:</label>
+    <select id="riskSelect"></select>
+  </div>
+  <div id="windSelectContainer" style="display:none; margin-top:6px;">
+    <label for="windSelect">Wind time:</label>
+    <select id="windSelect"></select>
+  </div>
+</div>
+<div id="riskStats" style="display:none;"></div>
+<script>
+require([
+"esri/config",
+"esri/Map",
+"esri/views/MapView",
+"esri/layers/GeoJSONLayer",
+"esri/layers/KMLLayer",
+"esri/layers/GraphicsLayer",
+"esri/Graphic",
+"esri/Color",
+"esri/widgets/LayerList",
+"esri/widgets/Legend",
+"esri/widgets/TimeSlider"
+], function(esriConfig, Map, MapView, GeoJSONLayer, KMLLayer, GraphicsLayer, Graphic, Color, LayerList, Legend, TimeSlider) {
+
+// Allow requests to our local dev server
+try { if (esriConfig && esriConfig.request && esriConfig.request.corsEnabledServers) esriConfig.request.corsEnabledServers.push(window.location.host); } catch (e) { console.warn("CORS config skipped:", e); }
+
+function localUrl(path) { return new URL(path, window.location.href).toString(); }
+
+const map = new Map({
+basemap: "gray-vector"
+});
+
+const view = new MapView({
+map: map,
+container: "viewDiv",
+center: [-156.682, 20.878],
+zoom: 11
+});
+
+// Enable default popup templates (native ArcGIS popup UI)
+view.popup.defaultPopupTemplateEnabled = true;
+
+// GeoJSON layers
+const emberLayer = new GeoJSONLayer({
+url: localUrl("./Lahaina_20230808T1530L_emberspread.geojson"),
+title: "Ember Spread",
+renderer: {
+type: "simple",
+symbol: {
+type: "simple-marker",
+color: [255, 69, 0, 0.6],
+size: 4,
+outline: { color: [255, 69, 0, 1], width: 0.5 }
+}
+},
+popupEnabled: true
+});
+
+const firePerim0 = new GeoJSONLayer({
+url: localUrl("./Lahaina_20230808T1530L_fireperim_0.geojson"),
+title: "Fire Perimeter - 0",
+renderer: {
+type: "simple",
+symbol: {
+type: "simple-fill",
+color: [255, 0, 0, 0.15],
+outline: { color: [178, 34, 34, 1], width: 1.5 }
+}
+},
+popupEnabled: true
+});
+
+const firePerim1 = new GeoJSONLayer({
+url: localUrl("./Lahaina_20230808T1530L_fireperim_1.geojson"),
+title: "Fire Perimeter - 1",
+renderer: {
+type: "simple",
+symbol: {
+type: "simple-fill",
+color: [255, 140, 0, 0.12],
+outline: { color: [205, 92, 92, 1], width: 1.2 }
+}
+},
+popupEnabled: true
+});
+
+// Additional GeoJSON (1700L)
+const emberLayer1700 = new GeoJSONLayer({
+url: localUrl("./Lahaina_20230808T1700L_emberspread.geojson"),
+title: "Ember Spread 1700",
+renderer: {
+type: "simple",
+symbol: {
+type: "simple-marker",
+color: [255, 69, 0, 0.6],
+size: 4,
+outline: { color: [255, 69, 0, 1], width: 0.5 }
+}
+},
+popupEnabled: true
+});
+
+function createPerimeter1700Layer(idx) {
+return new GeoJSONLayer({
+  url: localUrl(`./Lahaina_20230808T1700L_fireperim_${idx}.geojson`),
+  title: `Fire Perimeter 1700 - ${idx}`,
+  renderer: {
+    type: "simple",
+    symbol: {
+      type: "simple-fill",
+      color: [255, 0, 0, 0.12],
+      outline: { color: [178, 34, 34, 1], width: 1.2 }
+    }
+  },
+  popupEnabled: true
+});
+}
+
+const firePerim1700_0 = createPerimeter1700Layer(0);
+const firePerim1700_1 = createPerimeter1700Layer(1);
+const firePerim1700_2 = createPerimeter1700Layer(2);
+const firePerim1700_3 = createPerimeter1700Layer(3);
+const firePerim1700_4 = createPerimeter1700Layer(4);
+const firePerim1700_5 = createPerimeter1700Layer(5);
+const firePerim1700_6 = createPerimeter1700Layer(6);
+
+// KML layers
+const kml1500_10 = new KMLLayer({
+url: localUrl("./land_data_dem_point_08-08-2023_1500_30m_10_meters_agl.kml"),
+title: "DEM Points 1500 - 10m AGL"
+});
+
+const kml1500_80 = new KMLLayer({
+url: localUrl("./land_data_dem_point_08-08-2023_1500_30m_80_meters_agl.kml"),
+title: "DEM Points 1500 - 80m AGL"
+});
+
+const kml1600_10 = new KMLLayer({
+url: localUrl("./land_data_dem_point_08-08-2023_1600_30m_10_meters_agl.kml"),
+title: "DEM Points 1600 - 10m AGL"
+});
+
+const kml1600_80 = new KMLLayer({
+url: localUrl("./land_data_dem_point_08-08-2023_1600_30m_80_meters_agl.kml"),
+title: "DEM Points 1600 - 80m AGL"
+});
+
+// Additional GeoJSON (1800L_N)
+const emberLayer1800N = new GeoJSONLayer({
+url: localUrl("./Lahaina_20230808T1800L_N_emberspread.geojson"),
+title: "Ember Spread 1800N",
+renderer: {
+type: "simple",
+symbol: {
+type: "simple-marker",
+color: [255, 69, 0, 0.6],
+size: 4,
+outline: { color: [255, 69, 0, 1], width: 0.5 }
+}
+},
+popupEnabled: true
+});
+
+function createPerimeter1800NLayer(idx) {
+return new GeoJSONLayer({
+  url: localUrl(`./Lahaina_20230808T1800L_N_fireperim_${idx}.geojson`),
+  title: `Fire Perimeter 1800N - ${idx}`,
+  renderer: {
+    type: "simple",
+    symbol: {
+      type: "simple-fill",
+      color: [255, 0, 0, 0.12],
+      outline: { color: [178, 34, 34, 1], width: 1.2 }
+    }
+  },
+  popupEnabled: true
+});
+}
+
+const firePerim1800N_0 = createPerimeter1800NLayer(0);
+const firePerim1800N_1 = createPerimeter1800NLayer(1);
+const firePerim1800N_2 = createPerimeter1800NLayer(2);
+
+// Additional GeoJSON (1800L_S)
+const emberLayer1800S = new GeoJSONLayer({
+url: localUrl("./Lahaina_20230808T1800L_S_emberspread.geojson"),
+title: "Ember Spread 1800S",
+renderer: {
+type: "simple",
+symbol: {
+type: "simple-marker",
+color: [255, 69, 0, 0.6],
+size: 4,
+outline: { color: [255, 69, 0, 1], width: 0.5 }
+}
+},
+popupEnabled: true
+});
+
+function createPerimeter1800SLayer(idx) {
+return new GeoJSONLayer({
+  url: localUrl(`./Lahaina_20230808T1800L_S_fireperim_${idx}.geojson`),
+  title: `Fire Perimeter 1800S - ${idx}`,
+  renderer: {
+    type: "simple",
+    symbol: {
+      type: "simple-fill",
+      color: [255, 0, 0, 0.12],
+      outline: { color: [178, 34, 34, 1], width: 1.2 }
+    }
+  },
+  popupEnabled: true
+});
+}
+
+const firePerim1800S_0 = createPerimeter1800SLayer(0);
+const firePerim1800S_1 = createPerimeter1800SLayer(1);
+const firePerim1800S_2 = createPerimeter1800SLayer(2);
+const firePerim1800S_3 = createPerimeter1800SLayer(3);
+
+// Additional KML (1700, 1800, 1900)
+const kml1700_10 = new KMLLayer({
+url: localUrl("./land_data_dem_point_08-08-2023_1700_30m_10_meters_agl.kml"),
+title: "DEM Points 1700 - 10m AGL"
+});
+
+const kml1700_80 = new KMLLayer({
+url: localUrl("./land_data_dem_point_08-08-2023_1700_30m_80_meters_agl.kml"),
+title: "DEM Points 1700 - 80m AGL"
+});
+
+const kml1800_10 = new KMLLayer({
+url: localUrl("./land_data_dem_point_08-08-2023_1800_30m_10_meters_agl.kml"),
+title: "DEM Points 1800 - 10m AGL"
+});
+
+const kml1800_80 = new KMLLayer({
+url: localUrl("./land_data_dem_point_08-08-2023_1800_30m_80_meters_agl.kml"),
+title: "DEM Points 1800 - 80m AGL"
+});
+
+const kml1900_10 = new KMLLayer({
+url: localUrl("./land_data_dem_point_08-08-2023_1900_30m_10_meters_agl.kml"),
+title: "DEM Points 1900 - 10m AGL"
+});
+
+const kml1900_80 = new KMLLayer({
+url: localUrl("./land_data_dem_point_08-08-2023_1900_30m_80_meters_agl.kml"),
+title: "DEM Points 1900 - 80m AGL"
+});
+
+// Additional KML (2000, 2100)
+const kml2000_10 = new KMLLayer({
+url: localUrl("./land_data_dem_point_08-08-2023_2000_30m_10_meters_agl.kml"),
+title: "DEM Points 2000 - 10m AGL"
+});
+
+const kml2000_80 = new KMLLayer({
+url: localUrl("./land_data_dem_point_08-08-2023_2000_30m_80_meters_agl.kml"),
+title: "DEM Points 2000 - 80m AGL"
+});
+
+const kml2100_10 = new KMLLayer({
+url: localUrl("./land_data_dem_point_08-08-2023_2100_30m_10_meters_agl.kml"),
+title: "DEM Points 2100 - 10m AGL"
+});
+
+const kml2100_80 = new KMLLayer({
+url: localUrl("./land_data_dem_point_08-08-2023_2100_30m_80_meters_agl.kml"),
+title: "DEM Points 2100 - 80m AGL"
+});
+
+const layers = [
+firePerim0, firePerim1, emberLayer,
+emberLayer1700,
+firePerim1700_0, firePerim1700_1, firePerim1700_2, firePerim1700_3, firePerim1700_4, firePerim1700_5, firePerim1700_6,
+kml1500_10, kml1500_80, kml1600_10, kml1600_80,
+emberLayer1800N, firePerim1800N_0, firePerim1800N_1, firePerim1800N_2,
+emberLayer1800S, firePerim1800S_0, firePerim1800S_1, firePerim1800S_2, firePerim1800S_3,
+kml1700_10, kml1700_80, kml1800_10, kml1800_80, kml1900_10, kml1900_80,
+kml2000_10, kml2000_80, kml2100_10, kml2100_80
+];
+
+map.addMany(layers);
+
+// Build time groups from layer titles/urls
+function inferTimeKeyFromLayer(layer){
+  try {
+    var u = layer.url || "";
+    var m = u.match(/(\d{8}T\d{4}[A-Z]?)/); // e.g., 20230808T1700 or 20230808T1800L
+    if (m && m[1]) return m[1];
+    // fallback: check title
+    var t = layer.title || "";
+    var m2 = t.match(/(\d{4,})/);
+    if (m2 && m2[1]) return m2[1];
+  } catch(e) {}
+  return "static";
+}
+
+var timeKeyToLayers = {};
+layers.forEach(function(ly){
+  var k = inferTimeKeyFromLayer(ly);
+  if (!timeKeyToLayers[k]) timeKeyToLayers[k] = [];
+  timeKeyToLayers[k].push(ly);
+});
+
+var timeKeys = Object.keys(timeKeyToLayers).filter(function(k){ return k !== "static"; }).sort();
+
+// Initialize TimeSlider
+var timeSlider = new TimeSlider({
+  container: "timeSlider",
+  view: view,
+  mode: "instant",
+  stops: { values: timeKeys.map(function(k){
+    var m = k.match(/(\d{8})T(\d{4})/);
+    if (m) {
+      var y = parseInt(m[1].slice(0,4),10);
+      var mo = parseInt(m[1].slice(4,6),10)-1;
+      var d = parseInt(m[1].slice(6,8),10);
+      var hh = parseInt(m[2].slice(0,2),10);
+      var mm = parseInt(m[2].slice(2,4),10);
+      return new Date(y, mo, d, hh, mm);
+    }
+    // Fallback if only a 4-digit hour-like token
+    var now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }) }
+});
+
+function updateVisibilityForTimeIndex(idx){
+  var k = timeKeys[idx];
+  Object.keys(timeKeyToLayers).forEach(function(key){
+    timeKeyToLayers[key].forEach(function(ly){ ly.visible = (key === k); });
+  });
+}
+
+// Set initial time to first stop
+if (timeKeys.length) {
+  updateVisibilityForTimeIndex(0);
+}
+
+// Respond to slider thumb changes
+view.when().then(function(){
+  timeSlider.watch("timeExtent", function(){
+    var current = timeSlider.timeExtent && timeSlider.timeExtent.end || timeSlider.timeExtent && timeSlider.timeExtent.start;
+    if (!current) return;
+    var bestIdx = 0;
+    var bestDiff = Infinity;
+    for (var i=0;i<timeSlider.stops.values.length;i++){
+      var dt = Math.abs(timeSlider.stops.values[i].getTime() - current.getTime());
+      if (dt < bestDiff){ bestDiff = dt; bestIdx = i; }
+    }
+    updateVisibilityForTimeIndex(bestIdx);
+  });
+});
+
+// Ensure GeoJSON layers show all attributes in the popup
+function applyAllFieldsPopupTemplate(layer) {
+layer.outFields = ["*"];
+layer.when().then(function(){
+  if (layer.fields && layer.fields.length) {
+    var fieldInfos = layer.fields.filter(function(f){ return f.type !== "geometry"; }).map(function(f){
+      return { fieldName: f.name, label: f.alias || f.name };
+    });
+    layer.popupTemplate = {
+      title: layer.title || "Feature",
+      content: [{ type: "fields", fieldInfos: fieldInfos }]
+    };
+  }
+}).catch(function(err){ console.error("Popup template error for", layer.title, err); });
+}
+
+applyAllFieldsPopupTemplate(emberLayer);
+applyAllFieldsPopupTemplate(firePerim0);
+applyAllFieldsPopupTemplate(firePerim1);
+applyAllFieldsPopupTemplate(emberLayer1700);
+applyAllFieldsPopupTemplate(firePerim1700_0);
+applyAllFieldsPopupTemplate(firePerim1700_1);
+applyAllFieldsPopupTemplate(firePerim1700_2);
+applyAllFieldsPopupTemplate(firePerim1700_3);
+applyAllFieldsPopupTemplate(firePerim1700_4);
+applyAllFieldsPopupTemplate(firePerim1700_5);
+applyAllFieldsPopupTemplate(firePerim1700_6);
+applyAllFieldsPopupTemplate(emberLayer1800N);
+applyAllFieldsPopupTemplate(firePerim1800N_0);
+applyAllFieldsPopupTemplate(firePerim1800N_1);
+applyAllFieldsPopupTemplate(firePerim1800N_2);
+applyAllFieldsPopupTemplate(emberLayer1800S);
+applyAllFieldsPopupTemplate(firePerim1800S_0);
+applyAllFieldsPopupTemplate(firePerim1800S_1);
+applyAllFieldsPopupTemplate(firePerim1800S_2);
+applyAllFieldsPopupTemplate(firePerim1800S_3);
+
+// Fit to layers' extent when loaded
+Promise.all(layers.map(function(layer) { return layer.when(); })).then(function() {
+  var full = null;
+  layers.forEach(function(layer) {
+    if (layer.fullExtent) {
+      full = full ? full.union(layer.fullExtent) : layer.fullExtent;
+    }
+  });
+  if (full) {
+    view.goTo(full.expand(1.2)).catch(function(e){ console.warn("goTo:", e); });
+  }
+}).catch(function(e){ console.error("Layer load error:", e); });
+
+layers.forEach(function(layer){
+  layer.when().then(function(){ console.log("Loaded:", layer.title); }).catch(function(err){ console.error("Failed to load:", layer.title, err); });
+});
+
+// Widgets
+var layerList = new LayerList({ view: view });
+view.ui.add(layerList, "top-right");
+
+var legend = new Legend({ view: view });
+view.ui.add(legend, "bottom-right");
+
+view.on("layerview-create-error", function(event){
+  console.error("LayerView create error for", event.layer && event.layer.title, event.error);
+});
+
+// Optional: KML popups are based on KML descriptions; enable popups
+kml1500_10.popupEnabled = true;
+kml1500_80.popupEnabled = true;
+kml1600_10.popupEnabled = true;
+kml1600_80.popupEnabled = true;
+kml1700_10.popupEnabled = true;
+kml1700_80.popupEnabled = true;
+kml1800_10.popupEnabled = true;
+kml1800_80.popupEnabled = true;
+kml1900_10.popupEnabled = true;
+kml1900_80.popupEnabled = true;
+kml2000_10.popupEnabled = true;
+kml2000_80.popupEnabled = true;
+kml2100_10.popupEnabled = true;
+kml2100_80.popupEnabled = true;
+
+// Custom time selector dynamic loader
+var timeSelectEl = document.getElementById("timeSelect");
+var knownTimes = [];
+
+function getFolderKey(timeKey){
+  return timeKey.replace(/[NS]$/,'');
+}
+
+function getNs(timeKey){
+  var m = timeKey.match(/([NS])$/);
+  return m ? m[1] : "";
+}
+
+function buildKmlNames(timeKey){
+  var hhmm = getFolderKey(timeKey).slice(-4);
+  return [
+    "land_data_dem_point_08-08-2023_"+hhmm+"_30m_10_meters_agl.kml",
+    "land_data_dem_point_08-08-2023_"+hhmm+"_30m_80_meters_agl.kml"
+  ];
+}
+
+function buildGeoJsonNames(timeKey){
+  var base = getFolderKey(timeKey);
+  var ns = getNs(timeKey);
+  var mid = ns ? ("L_"+ns+"_") : "L_";
+  var ember = "Lahaina_"+base+mid+"emberspread.geojson";
+  var perims = [];
+  for (var i=0;i<=8;i++){ perims.push("Lahaina_"+base+mid+"fireperim_"+i+".geojson"); }
+  return [ember].concat(perims);
+}
+
+function exists(url){
+  return fetch(url, { method: "GET", cache: "no-store" })
+    .then(function(r){
+      if (!r.ok) return false;
+      var ct = String(r.headers.get('content-type')||'').toLowerCase();
+      var lower = url.toLowerCase();
+      if (lower.endsWith('.geojson')) {
+        return ct.includes('application/json') || ct.includes('application/geo+json') || ct.includes('text/plain') || ct.includes('application/octet-stream');
+      }
+      if (lower.endsWith('.kml')) {
+        return ct.includes('xml') || ct.includes('kml') || ct.includes('text/plain') || ct.includes('application/octet-stream');
+      }
+      if (lower.endsWith('.kmz')) {
+        return ct.includes('zip') || ct.includes('kmz') || ct.includes('application/octet-stream');
+      }
+      return true;
+    })
+    .catch(function(){ return false; });
+}
+
+function urlCandidates(folderKey, filename){
+  return [ localUrl("./"+folderKey+"/"+filename), localUrl("./"+filename) ];
+}
+
+function setDefaultRendererForGeometry(layer){
+  layer.when().then(function(){
+    var gt = layer.geometryType;
+    if (!gt) return;
+    if (gt === 'point' || gt === 'multipoint'){
+      layer.renderer = {
+        type: 'simple',
+        symbol: { type: 'simple-marker', color: [255,69,0,0.6], size: 6, outline: { color: [255,69,0,1], width: 0.5 } }
+      };
+    } else if (gt === 'polyline'){
+      layer.renderer = {
+        type: 'simple',
+        symbol: { type: 'simple-line', color: [178,34,34,1], width: 2 }
+      };
+    } else if (gt === 'polygon'){
+      layer.renderer = {
+        type: 'simple',
+        symbol: { type: 'simple-fill', color: [255,0,0,0.15], outline: { color: [178,34,34,1], width: 1.5 } }
+      };
+    }
+  }).catch(function(e){ console.warn('renderer when() failed', e); });
+}
+
+function createLayerFor(url){
+  if (url.toLowerCase().endsWith('.geojson')){
+    var lyr = new GeoJSONLayer({ url: url, popupEnabled: true, outFields: ["*"], title: url.split('/').pop() });
+    setDefaultRendererForGeometry(lyr);
+    return lyr;
+  }
+  if (url.toLowerCase().endsWith('.kml')){
+    return new KMLLayer({ url: url, title: url.split('/').pop() });
+  }
+  return null;
+}
+
+function applyPopupTemplateIfGeo(layer){
+  if (layer && layer.declaredClass && layer.declaredClass.indexOf('GeoJSONLayer') !== -1){
+    applyAllFieldsPopupTemplate(layer);
+  }
+}
+
+function addTimeOptions(){
+  timeSelectEl.innerHTML = "";
+  knownTimes.forEach(function(t){
+    var opt = document.createElement('option');
+    opt.value = t; opt.textContent = t;
+    timeSelectEl.appendChild(opt);
+  });
+}
+
+function showLoading(msg){ console.log(msg || 'Loading time...'); }
+
+function selectFolder(folderKey){
+  showLoading("Selecting folder "+folderKey);
+  var kmlNames = [
+    "land_data_dem_point_08-08-2023_"+folderKey.slice(-4)+"_30m_10_meters_agl.kml",
+    "land_data_dem_point_08-08-2023_"+folderKey.slice(-4)+"_30m_80_meters_agl.kml"
+  ];
+  var variants = ["L_", "L_N_", "L_S_"]; // support N/S variants
+  var gjNames = [];
+  variants.forEach(function(mid){
+    gjNames.push("Lahaina_"+folderKey+mid+"emberspread.geojson");
+    for (var i=0;i<=8;i++){
+      gjNames.push("Lahaina_"+folderKey+mid+"fireperim_"+i+".geojson");
+    }
+  });
+  var all = kmlNames.concat(gjNames);
+  var urls = all.map(function(n){ return localUrl("./"+folderKey+"/"+n); });
+  var checks = urls.map(function(u){ return exists(u).then(function(ok){ return { url: u, ok: ok }; }); });
+  Promise.all(checks).then(function(results){
+    var valid = results.filter(function(r){ return r.ok; }).map(function(r){ return r.url; });
+    map.removeAll();
+    var newLayers = valid.map(createLayerFor).filter(Boolean);
+    if (newLayers.length){
+      map.addMany(newLayers);
+      var whenAll = Promise.all(newLayers.map(function(l){ return l.when(); }));
+      whenAll.then(function(){
+        var full = null;
+        newLayers.forEach(function(l){ if (l.fullExtent) full = full ? full.union(l.fullExtent) : l.fullExtent; });
+        if (full) { view.goTo(full.expand(1.2)).catch(function(e){ console.warn("goTo:", e); }); }
+      });
+      newLayers.forEach(applyPopupTemplateIfGeo);
+      // Toggle legend visibility: show only if we have GeoJSON layers (with renderers)
+      try {
+        var hasGeo = newLayers.some(function(l){ return l.declaredClass && l.declaredClass.indexOf('GeoJSONLayer') !== -1; });
+        legend.visible = hasGeo;
+      } catch(e) { console.warn('legend toggle failed', e); }
+    }
+  });
+}
+
+// Wire buttons
+Array.prototype.forEach.call(document.querySelectorAll('.timeBtn'), function(btn){
+  btn.addEventListener('click', function(){
+    Array.prototype.forEach.call(document.querySelectorAll('.timeBtn'), function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    var folder = btn.getAttribute('data-folder');
+    selectFolder(folder);
+  });
+});
+
+// Optionally auto-select first time button with data
+(function(){
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('.timeBtn'));
+  if (!buttons.length) return;
+  (function tryNext(i){
+    if (i >= buttons.length) { buttons[0].click(); return; }
+    var folder = buttons[i].getAttribute('data-folder');
+    var hhmm = folder.slice(-4);
+    var probes = [
+      localUrl('./'+folder+'/Lahaina_'+folder+'L_emberspread.geojson'),
+      localUrl('./'+folder+'/Lahaina_'+folder+'L_fireperim_0.geojson'),
+      localUrl('./'+folder+'/land_data_dem_point_08-08-2023_'+hhmm+'_30m_10_meters_agl.kml'),
+      localUrl('./'+folder+'/land_data_dem_point_08-08-2023_'+hhmm+'_30m_80_meters_agl.kml')
+    ];
+    Promise.any(probes.map(function(u){ return exists(u).then(function(ok){ if (ok) return u; else throw new Error('no'); }); }))
+      .then(function(){ buttons[i].click(); })
+      .catch(function(){ tryNext(i+1); });
+  })(0);
+})();
+
+var currentMode = 'fire';
+var riskSelectEl = document.getElementById('riskSelect');
+var fireSelectEl = document.getElementById('fireSelect');
+
+function listCandidateRiskKeys(){
+  // Generate YYYYMMDD_HHMM candidates around 08/07 and 08/08 hours commonly used
+  var days = ['20230807','20230808'];
+  var hours = ['1500','1530','1600','1700','1800','1900','2000','2100'];
+  var keys = [];
+  days.forEach(function(d){ hours.forEach(function(h){ keys.push(d+'_'+h); }); });
+  return keys;
+}
+
+function riskKeyToLabel(key){
+  var d = key.split('_')[0];
+  var t = key.split('_')[1];
+  var y = d.slice(0,4), mo = d.slice(4,6), da = d.slice(6,8);
+  var hh = t.slice(0,2), mm = t.slice(2,4);
+  return mo+'/'+da+'/'+y+' '+hh+':'+mm;
+}
+
+function buildRiskUrl(key){
+  return localUrl('./riskMap_timeSeries_reduced/lahaina-fire_risk_'+key+'.geojson');
+}
+
+function populateRiskSelect(){
+  riskSelectEl.innerHTML = '';
+  var candidates = listCandidateRiskKeys();
+  var checks = candidates.map(function(k){ var u = buildRiskUrl(k); return exists(u).then(function(ok){ return { key:k, ok:ok }; }); });
+  Promise.all(checks).then(function(results){
+    results.filter(function(r){ return r.ok; }).forEach(function(r){
+      var opt = document.createElement('option');
+      opt.value = r.key; opt.textContent = riskKeyToLabel(r.key);
+      riskSelectEl.appendChild(opt);
+    });
+    if (riskSelectEl.options.length){ loadRisk(riskSelectEl.value); }
+  });
+}
+
+function renderRiskStats(stats, label){
+  var el = document.getElementById('riskStats');
+  if (!stats){ el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = ''+
+    '<div class="title">Risk stats — '+(label||'')+'</div>'+
+    '<div class="kv"><span>windtl_total_risk</span><span>'+stats.wind.toFixed(3)+'</span></div>'+
+    '<div class="kv"><span>weather_total_risk</span><span>'+stats.weather.toFixed(3)+'</span></div>'+
+    '<div class="kv"><span>fuels_total_risk</span><span>'+stats.fuels.toFixed(3)+'</span></div>'+
+    '<div class="kv"><span>topography_total_risk</span><span>'+stats.topo.toFixed(3)+'</span></div>';
+}
+
+function calculateRiskStatsFromFeatures(features){
+  var sumWind=0, sumWeather=0, sumFuels=0, sumTopo=0, n=0;
+  features.forEach(function(f){
+    var p = f.properties || {};
+    function num(v){ var x = Number(v); return isFinite(x) ? x : 0; }
+    var w = num(p.windtl_total_risk ?? p.wind_total_risk ?? p.windrisk);
+    var we = num(p.weather_total_risk ?? p.weatherrisk);
+    var fu = num(p.fuels_total_risk ?? p.fuelsrisk ?? p.fuel_total_risk);
+    var to = num(p.topography_total_risk ?? p.toporisk ?? p.topographyrisk);
+    sumWind+=w; sumWeather+=we; sumFuels+=fu; sumTopo+=to; n++;
+  });
+  if (!n) return null;
+  return { wind: sumWind/n, weather: sumWeather/n, fuels: sumFuels/n, topo: sumTopo/n };
+}
+
+function extractRiskStatsFromGeo(geo){
+  function num(v){
+    if (v === null || v === undefined) return 0;
+    if (typeof v === 'number') return isFinite(v) ? v : 0;
+    if (typeof v === 'string'){
+      var m = v.match(/-?\d+(?:\.\d+)?/);
+      if (m) { var x = parseFloat(m[0]); return isFinite(x) ? x : 0; }
+      return 0;
+    }
+    var x = Number(v);
+    return isFinite(x) ? x : 0;
+  }
+  function fromTotals(obj){
+    if (!obj || typeof obj !== 'object') return null;
+    var hasAny = ['windtl_total_risk','wind_total_risk','windrisk','weather_total_risk','weatherrisk','fuels_total_risk','fuelsrisk','fuel_total_risk','topography_total_risk','toporisk','topographyrisk']
+      .some(function(k){ return obj[k] !== undefined && obj[k] !== null; });
+    if (!hasAny) return null;
+    return {
+      wind: num(obj.windtl_total_risk ?? obj.wind_total_risk ?? obj.windrisk),
+      weather: num(obj.weather_total_risk ?? obj.weatherrisk),
+      fuels: num(obj.fuels_total_risk ?? obj.fuelsrisk ?? obj.fuel_total_risk),
+      topo: num(obj.topography_total_risk ?? obj.toporisk ?? obj.topographyrisk)
+    };
+  }
+  var candidates = [];
+  if (geo) {
+    candidates.push(geo.total_risks);
+    if (geo.properties) candidates.push(geo.properties.total_risks);
+    if (geo.summary) candidates.push(geo.summary.total_risks);
+    if (geo.metadata) candidates.push(geo.metadata.total_risks);
+    if (geo.totals) candidates.push(geo.totals);
+    if (geo.features && geo.features[0] && geo.features[0].properties) {
+      candidates.push(geo.features[0].properties.total_risks);
+    }
+  }
+  for (var i=0;i<candidates.length;i++){
+    var s = fromTotals(candidates[i]);
+    if (s) return s;
+  }
+  return null;
+}
+
+function loadRisk(key){
+  map.removeAll();
+  var url = buildRiskUrl(key);
+  // Fetch the GeoJSON to determine geometry type and read RGB attributes
+  fetch(url, { cache:'no-store' }).then(function(r){ return r.json(); }).then(function(geo){
+    var geomType = geo && geo.features && geo.features[0] && geo.features[0].geometry && geo.features[0].geometry.type;
+    var isPoint = geomType === 'Point' || geomType === 'MultiPoint';
+    var stats = extractRiskStatsFromGeo(geo) || calculateRiskStatsFromFeatures(geo && geo.features || []);
+    renderRiskStats(stats, riskKeyToLabel(key));
+    if (isPoint){
+      var gl = new GraphicsLayer({ title: 'Risk '+riskKeyToLabel(key) });
+      var graphics = [];
+      geo.features.forEach(function(f){
+        var coords = f.geometry.type === 'Point' ? f.geometry.coordinates : f.geometry.coordinates[0];
+        var attrs = f.properties || {};
+        var css = attrs.color_val_RGB || attrs.color || attrs.rgb;
+        var color;
+        if (css){
+          try { color = Color.fromString(css).toRgba(); } catch(e){ color = [0,0,0,0.9]; }
+          if (color.length === 3) color.push(0.9);
+        } else {
+          var rVal = attrs.R !== undefined ? attrs.R : (attrs.r !== undefined ? attrs.r : 0);
+          var gVal = attrs.G !== undefined ? attrs.G : (attrs.g !== undefined ? attrs.g : 0);
+          var bVal = attrs.B !== undefined ? attrs.B : (attrs.b !== undefined ? attrs.b : 0);
+          color = [Number(rVal)||0, Number(gVal)||0, Number(bVal)||0, 0.9];
+        }
+        graphics.push(new Graphic({
+          geometry: { type: 'point', longitude: coords[0], latitude: coords[1] },
+          attributes: attrs,
+          symbol: { type: 'simple-marker', color: color, size: 6, outline: { color:[0,0,0,0.2], width: 0.25 } },
+          popupTemplate: { title: 'Risk Point', content: [{ type:'fields', fieldInfos: Object.keys(attrs).map(function(k){ return { fieldName:k, label:k }; }) }] }
+        }));
+      });
+      gl.addMany(graphics);
+      map.add(gl);
+      if (graphics.length){ view.goTo({ target: graphics }); }
+      legend.visible = false; // Per-point RGB won't produce a meaningful legend
+    } else {
+      var layer = new GeoJSONLayer({ url: url, title: 'Risk '+riskKeyToLabel(key), outFields: ['*'], popupEnabled: true });
+      layer.when().then(function(){
+        // If polygons have color_val_RGB, use UniqueValueRenderer by expression mapping to symbol color
+        var usesCss = false;
+        if (geo && geo.features && geo.features[0] && geo.features[0].properties && geo.features[0].properties.color_val_RGB){
+          usesCss = true;
+        }
+        if (usesCss){
+          layer.renderer = {
+            type: 'unique-value',
+            field: 'color_val_RGB',
+            uniqueValueInfos: []
+          };
+          // Build uniqueValueInfos for distinct colors found in sample (limit to 50 to avoid huge legends)
+          var seen = {};
+          for (var i=0;i<geo.features.length && Object.keys(seen).length<50;i++){
+            var css = geo.features[i].properties && geo.features[i].properties.color_val_RGB;
+            if (css && !seen[css]){
+              var fill;
+              try { fill = Color.fromString(css).toRgba(); if (fill.length===3) fill.push(0.6); } catch(e){ fill = [128,128,128,0.6]; }
+              layer.renderer.uniqueValueInfos.push({
+                value: css,
+                symbol: { type:'simple-fill', color: fill, outline:{ color:[0,0,0,0.2], width: 0.25 } },
+                label: css
+              });
+              seen[css] = true;
+            }
+          }
+        } else {
+          var field = (layer.fields.find(function(f){ return f.name.toLowerCase().includes('risk'); }) || {}).name;
+          if (field){
+            layer.renderer = {
+              type: 'class-breaks',
+              field: field,
+              classBreakInfos: [
+                { minValue: 0, maxValue: 0.2, symbol: { type:'simple-fill', color:[0, 104, 55, 0.35], outline:{ color:[0,104,55], width:0.5 } }, label:'Low' },
+                { minValue: 0.2, maxValue: 0.5, symbol: { type:'simple-fill', color:[127, 188, 65, 0.35], outline:{ color:[127,188,65], width:0.5 } }, label:'Moderate' },
+                { minValue: 0.5, maxValue: 0.7, symbol: { type:'simple-fill', color:[255, 255, 51, 0.35], outline:{ color:[255,255,51], width:0.5 } }, label:'Elevated' },
+                { minValue: 0.7, maxValue: 0.9, symbol: { type:'simple-fill', color:[244, 109, 67, 0.35], outline:{ color:[244,109,67], width:0.5 } }, label:'High' },
+                { minValue: 0.9, maxValue: 1.0, symbol: { type:'simple-fill', color:[165, 0, 38, 0.35], outline:{ color:[165,0,38], width:0.5 } }, label:'Extreme' }
+              ]
+            };
+          } else {
+            setDefaultRendererForGeometry(layer);
+          }
+        }
+        applyAllFieldsPopupTemplate(layer);
+      });
+      map.add(layer);
+      layer.when().then(function(){ if (layer.fullExtent) view.goTo(layer.fullExtent.expand(1.2)); });
+      legend.visible = true;
+    }
+  }).catch(function(e){ console.error('Risk load failed', e); renderRiskStats(null); });
+}
+
+var windSelectEl = document.getElementById('windSelect');
+
+function windFilenameToLabel(name){
+  var m = name.match(/(?:^|[_-])(\d{8})[_-](\d{4})(?=[_.])/); // ...YYYYMMDD_HHMM...
+  if (m){
+    var d = m[1], t = m[2];
+    var y = d.slice(0,4), mo = d.slice(4,6), da = d.slice(6,8);
+    var hh = t.slice(0,2), mm = t.slice(2,4);
+    return mo+'/'+da+'/'+y+' '+hh+':'+mm;
+  }
+  var m2 = name.match(/land_data_dem_point_(\d{2})-(\d{2})-(\d{4})_(\d{4})_30m\.(?:kmz|kml)$/);
+  if (m2){
+    var mo = m2[1], da = m2[2], y = m2[3], t = m2[4];
+    return mo+'/'+da+'/'+y+' '+t.slice(0,2)+':'+t.slice(2,4);
+  }
+  return name;
+}
+
+function populateWindSelect(){
+  windSelectEl.innerHTML = '';
+  // Known wind GeoJSON files from dataset (fallback when directory listing is unavailable)
+  var known = [
+    'land_data_dem_point_08-08-2023_0400_30m.geojson',
+    'land_data_dem_point_08-08-2023_0500_30m.geojson',
+    'land_data_dem_point_08-08-2023_0600_30m.geojson',
+    'land_data_dem_point_08-08-2023_0700_30m.geojson',
+    'land_data_dem_point_08-08-2023_0800_30m.geojson',
+    'land_data_dem_point_08-08-2023_0900_30m.geojson',
+    'land_data_dem_point_08-08-2023_1000_30m.geojson',
+    'land_data_dem_point_08-08-2023_1300_30m.geojson',
+    'land_data_dem_point_08-08-2023_1600_30m.geojson',
+    'land_data_dem_point_08-08-2023_2000_30m.geojson',
+    'land_data_dem_point_08-09-2023_0000_30m.geojson',
+    'land_data_dem_point_08-09-2023_0400_30m.geojson',
+    'land_data_dem_point_08-09-2023_1000_30m.geojson',
+    'land_data_dem_point_08-09-2023_1600_30m.geojson',
+    'land_data_dem_point_08-09-2023_2200_30m.geojson',
+    'land_data_dem_point_08-10-2023_0400_30m.geojson',
+    'land_data_dem_point_08-11-2023_0400_30m.geojson',
+    'land_data_dem_point_08-11-2023_1600_30m.geojson',
+    'land_data_dem_point_08-12-2023_0400_30m.geojson',
+    'land_data_dem_point_08-12-2023_1600_30m.geojson',
+    'land_data_dem_point_08-13-2023_0400_30m.geojson'
+  ];
+  // Probe existence using GET (works under Vite dev server)
+  var checks = known.map(function(name){
+    var url = localUrl('./windMap_timeSeries_reduced/'+name);
+    return exists(url).then(function(ok){ return { name:name, url:url, ok:ok }; });
+  });
+  Promise.all(checks).then(function(results){
+    var files = results.filter(function(r){ return r.ok; }).map(function(r){ return { name:r.name, url:r.url }; });
+    files.sort(function(a,b){ return a.name.localeCompare(b.name); });
+    files.forEach(function(f){
+      var opt = document.createElement('option');
+      opt.value = f.name; opt.textContent = windFilenameToLabel(f.name); opt.dataset.url = f.url;
+      windSelectEl.appendChild(opt);
+    });
+    if (windSelectEl.options.length){
+      var opt0 = windSelectEl.options[0];
+      loadWind(opt0.dataset.url, opt0.value);
+    }
+  }).catch(function(e){ console.error('Wind list build failed', e); });
+}
+
+function loadWind(url, key){
+  map.removeAll();
+  renderRiskStats(null);
+  legend.visible = false;
+
+  function parseCssColor(str, fallback){
+    try {
+      if (!str) return fallback;
+      var c = Color.fromString(String(str));
+      var rgba = c ? c.toRgba() : null;
+      if (!rgba) return fallback;
+      if (rgba.length === 3) rgba.push(1);
+      return rgba;
+    } catch(e){ return fallback; }
+  }
+
+  function parseNum(v, def){
+    var n = Number(v);
+    return isFinite(n) ? n : def;
+  }
+
+  function symbolFor(geomType, props){
+    var stroke = parseCssColor(props && (props.stroke || props['stroke-color']), [0,0,0,1]);
+    var strokeOpacity = parseNum(props && (props['stroke-opacity']), 1);
+    stroke[3] = strokeOpacity;
+    var strokeWidth = parseNum(props && (props['stroke-width']), 1);
+
+    if (geomType === 'point' || geomType === 'multipoint'){
+      var fill = parseCssColor(props && (props.fill || props['marker-color'] || props.color), [0,0,255,0.7]);
+      var fillOpacity = parseNum(props && (props['fill-opacity']), fill[3] ?? 0.7);
+      fill[3] = isFinite(fillOpacity) ? fillOpacity : 0.7;
+      return { type: 'simple-marker', color: fill, size: 6, outline: { color: stroke, width: Math.max(0.25, strokeWidth) } };
+    }
+    if (geomType === 'polyline'){
+      return { type: 'simple-line', color: stroke, width: Math.max(1, strokeWidth) };
+    }
+    // polygon
+    var pFill = parseCssColor(props && (props.fill || props['fill-color'] || props.color), [0,0,255,0.3]);
+    var pFillOpacity = parseNum(props && (props['fill-opacity']), pFill[3] ?? 0.3);
+    pFill[3] = isFinite(pFillOpacity) ? pFillOpacity : 0.3;
+    return { type: 'simple-fill', color: pFill, outline: { color: stroke, width: Math.max(0.5, strokeWidth) } };
+  }
+
+  function addGraphicFromCoords(gl, arcGeomType, coords, props){
+    if (arcGeomType === 'point'){
+      gl.add(new Graphic({ geometry: { type:'point', longitude: coords[0], latitude: coords[1] }, symbol: symbolFor('point', props), attributes: props, popupTemplate: { title: 'Wind', content: [{ type:'fields', fieldInfos: Object.keys(props||{}).map(function(k){ return { fieldName:k, label:k }; }) }] } }));
+      return;
+    }
+    if (arcGeomType === 'polyline'){
+      gl.add(new Graphic({ geometry: { type:'polyline', paths: coords }, symbol: symbolFor('polyline', props), attributes: props, popupTemplate: { title: 'Wind', content: [{ type:'fields', fieldInfos: Object.keys(props||{}).map(function(k){ return { fieldName:k, label:k }; }) }] } }));
+      return;
+    }
+    // polygon
+    gl.add(new Graphic({ geometry: { type:'polygon', rings: coords }, symbol: symbolFor('polygon', props), attributes: props, popupTemplate: { title: 'Wind', content: [{ type:'fields', fieldInfos: Object.keys(props||{}).map(function(k){ return { fieldName:k, label:k }; }) }] } }));
+  }
+
+  fetch(url, { cache:'no-store' }).then(function(r){ return r.json(); }).then(function(gj){
+    var gl = new GraphicsLayer({ title: 'Wind '+(key || '') });
+    var graphicsCount = 0;
+    (gj.features || []).forEach(function(f){
+      var g = f.geometry || {};
+      var props = f.properties || {};
+      if (!g || !g.type) return;
+      if (g.type === 'Point'){
+        addGraphicFromCoords(gl, 'point', g.coordinates, props); graphicsCount++;
+      } else if (g.type === 'MultiPoint'){
+        (g.coordinates || []).forEach(function(pt){ addGraphicFromCoords(gl, 'point', pt, props); graphicsCount++; });
+      } else if (g.type === 'LineString'){
+        addGraphicFromCoords(gl, 'polyline', [g.coordinates], props); graphicsCount++;
+      } else if (g.type === 'MultiLineString'){
+        addGraphicFromCoords(gl, 'polyline', g.coordinates, props); graphicsCount++;
+      } else if (g.type === 'Polygon'){
+        addGraphicFromCoords(gl, 'polygon', g.coordinates, props); graphicsCount++;
+      } else if (g.type === 'MultiPolygon'){
+        (g.coordinates || []).forEach(function(poly){ addGraphicFromCoords(gl, 'polygon', poly, props); graphicsCount++; });
+      }
+    });
+    map.add(gl);
+    if (graphicsCount){ view.goTo({ target: gl.graphics }); }
+  }).catch(function(e){ console.error('Wind GeoJSON failed to load', e); });
+}
+
+windSelectEl.addEventListener('change', function(){
+  var opt = windSelectEl.options[windSelectEl.selectedIndex];
+  loadWind(opt.dataset.url, opt.value);
+});
+
+// Extend mode toggle
+Array.prototype.forEach.call(document.querySelectorAll('.modeBtn'), function(btn){
+  btn.addEventListener('click', function(){
+    Array.prototype.forEach.call(document.querySelectorAll('.modeBtn'), function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    currentMode = btn.getAttribute('data-mode');
+    if (currentMode === 'fire'){
+      document.getElementById('timeButtons').style.display = 'none';
+      document.getElementById('fireSelectContainer').style.display = 'block';
+      document.getElementById('riskSelectContainer').style.display = 'none';
+      document.getElementById('windSelectContainer').style.display = 'none';
+      renderRiskStats(null);
+      try { if (legend) { legend.visible = true; if (!view.ui.find(legend)) { view.ui.add(legend, 'bottom-right'); } } } catch(e){}
+      try { if (layerList && !view.ui.find(layerList)) { view.ui.add(layerList, 'top-right'); } } catch(e){}
+      populateFireSelect();
+    } else if (currentMode === 'risk') {
+      document.getElementById('timeButtons').style.display = 'none';
+      document.getElementById('fireSelectContainer').style.display = 'none';
+      document.getElementById('riskSelectContainer').style.display = 'block';
+      document.getElementById('windSelectContainer').style.display = 'none';
+      try { if (legend) { legend.visible = true; if (!view.ui.find(legend)) { view.ui.add(legend, 'bottom-right'); } } } catch(e){}
+      try { if (layerList && !view.ui.find(layerList)) { view.ui.add(layerList, 'top-right'); } } catch(e){}
+      populateRiskSelect();
+    } else if (currentMode === 'wind') {
+      document.getElementById('timeButtons').style.display = 'none';
+      document.getElementById('fireSelectContainer').style.display = 'none';
+      document.getElementById('riskSelectContainer').style.display = 'none';
+      document.getElementById('windSelectContainer').style.display = 'block';
+      try { if (legend) { legend.visible = false; if (view && view.ui && view.ui.find(legend)) { view.ui.remove(legend); } } } catch(e){}
+      try { if (layerList && view.ui.find(layerList)) { view.ui.remove(layerList); } } catch(e){}
+      populateWindSelect();
+    }
+  });
+});
+
+// Risk select change
+riskSelectEl.addEventListener('change', function(){ renderRiskStats(null); loadRisk(this.value); });
+
+function fireKeyToLabel(key){
+  try {
+    var m = key.match(/(\d{8})T(\d{4})/);
+    if (m){
+      var d = m[1], t = m[2];
+      var y = d.slice(0,4), mo = d.slice(4,6), da = d.slice(6,8);
+      var hh = t.slice(0,2), mm = t.slice(2,4);
+      return mo+'/'+da+'/'+y+' '+hh+':'+mm;
+    }
+  } catch(e){}
+  return key;
+}
+
+function populateFireSelect(){
+  if (!fireSelectEl) return;
+  fireSelectEl.innerHTML = '';
+  var allowed = ['20230808T1530','20230808T1700','20230808T1800'];
+  allowed.forEach(function(k){
+    var opt = document.createElement('option');
+    opt.value = k; opt.textContent = fireKeyToLabel(k);
+    fireSelectEl.appendChild(opt);
+  });
+  if (fireSelectEl.options.length){
+    var v = fireSelectEl.options[0].value;
+    selectFolder(v);
+  }
+}
+
+if (fireSelectEl) {
+  fireSelectEl.addEventListener('change', function(){ selectFolder(this.value); });
+}
+
+});
+</script>
+</body>
+</html>
+
+

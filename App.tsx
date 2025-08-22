@@ -1437,19 +1437,6 @@ export default function App() {
         <div className="box-border content-stretch flex flex-row gap-6 h-[1440px] items-start justify-start p-0 relative shrink-0 w-full">
           {/* Left Side - Fire Map */}
           <div className="bg-[#14171a] box-border content-stretch flex flex-col gap-3 items-start justify-start overflow-clip p-0 relative shrink-0 w-[917px] rounded">
-            {/* Map Title + Containment Card already handled above */}
-            <div className="relative shrink-0 w-full">
-              <div className="flex flex-col items-center justify-center relative size-full">
-                <div className="box-border content-stretch flex flex-col gap-4 items-center justify-center px-4 py-2 relative w-full">
-                  <div className="box-border content-stretch flex flex-row items-center justify-between p-0 relative shrink-0 w-full">
-                    <div className="flex items-center gap-3">
-                      {/* Title removed as requested */}
-                      {/* Containment Card removed (contained in Esri overlay instead) */}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
 
             {/* Objectives Card moved to right panel */}
 
