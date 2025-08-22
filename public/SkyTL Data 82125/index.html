@@ -88,7 +88,7 @@ view.popup.defaultPopupTemplateEnabled = true;
 
 // GeoJSON layers
 const emberLayer = new GeoJSONLayer({
-url: localUrl("./Lahaina_20230808T1530L_emberspread.geojson"),
+url: localUrl("./20230808T1530/Lahaina_20230808T1530L_emberspread.geojson"),
 title: "Ember Spread",
 renderer: {
 type: "simple",
@@ -103,7 +103,7 @@ popupEnabled: true
 });
 
 const firePerim0 = new GeoJSONLayer({
-url: localUrl("./Lahaina_20230808T1530L_fireperim_0.geojson"),
+url: localUrl("./20230808T1530/Lahaina_20230808T1530L_fireperim_0.geojson"),
 title: "Fire Perimeter - 0",
 renderer: {
 type: "simple",
@@ -117,7 +117,7 @@ popupEnabled: true
 });
 
 const firePerim1 = new GeoJSONLayer({
-url: localUrl("./Lahaina_20230808T1530L_fireperim_1.geojson"),
+url: localUrl("./20230808T1530/Lahaina_20230808T1530L_fireperim_1.geojson"),
 title: "Fire Perimeter - 1",
 renderer: {
 type: "simple",
@@ -132,7 +132,7 @@ popupEnabled: true
 
 // Additional GeoJSON (1700L)
 const emberLayer1700 = new GeoJSONLayer({
-url: localUrl("./Lahaina_20230808T1700L_emberspread.geojson"),
+url: localUrl("./20230808T1700/Lahaina_20230808T1700L_emberspread.geojson"),
 title: "Ember Spread 1700",
 renderer: {
 type: "simple",
@@ -148,7 +148,7 @@ popupEnabled: true
 
 function createPerimeter1700Layer(idx) {
 return new GeoJSONLayer({
-  url: localUrl(`./Lahaina_20230808T1700L_fireperim_${idx}.geojson`),
+  url: localUrl(`./20230808T1700/Lahaina_20230808T1700L_fireperim_${idx}.geojson`),
   title: `Fire Perimeter 1700 - ${idx}`,
   renderer: {
     type: "simple",
@@ -172,28 +172,28 @@ const firePerim1700_6 = createPerimeter1700Layer(6);
 
 // KML layers
 const kml1500_10 = new KMLLayer({
-url: localUrl("./land_data_dem_point_08-08-2023_1500_30m_10_meters_agl.kml"),
+url: localUrl("./20230808T1500/land_data_dem_point_08-08-2023_1500_30m_10_meters_agl.kml"),
 title: "DEM Points 1500 - 10m AGL"
 });
 
 const kml1500_80 = new KMLLayer({
-url: localUrl("./land_data_dem_point_08-08-2023_1500_30m_80_meters_agl.kml"),
+url: localUrl("./20230808T1500/land_data_dem_point_08-08-2023_1500_30m_80_meters_agl.kml"),
 title: "DEM Points 1500 - 80m AGL"
 });
 
 const kml1600_10 = new KMLLayer({
-url: localUrl("./land_data_dem_point_08-08-2023_1600_30m_10_meters_agl.kml"),
+url: localUrl("./20230808T1600/land_data_dem_point_08-08-2023_1600_30m_10_meters_agl.kml"),
 title: "DEM Points 1600 - 10m AGL"
 });
 
-const kml1600_80 = new KMLLayer({
-url: localUrl("./land_data_dem_point_08-08-2023_1600_30m_80_meters_agl.kml"),
+const kml1600_80 = new KMLayer({
+url: localUrl("./20230808T1600/land_data_dem_point_08-08-2023_1600_30m_80_meters_agl.kml"),
 title: "DEM Points 1600 - 80m AGL"
 });
 
 // Additional GeoJSON (1800L_N)
 const emberLayer1800N = new GeoJSONLayer({
-url: localUrl("./Lahaina_20230808T1800L_N_emberspread.geojson"),
+url: localUrl("./20230808T1800/Lahaina_20230808T1800L_N_emberspread.geojson"),
 title: "Ember Spread 1800N",
 renderer: {
 type: "simple",
@@ -209,7 +209,7 @@ popupEnabled: true
 
 function createPerimeter1800NLayer(idx) {
 return new GeoJSONLayer({
-  url: localUrl(`./Lahaina_20230808T1800L_N_fireperim_${idx}.geojson`),
+  url: localUrl(`./20230808T1800/Lahaina_20230808T1800L_N_fireperim_${idx}.geojson`),
   title: `Fire Perimeter 1800N - ${idx}`,
   renderer: {
     type: "simple",
@@ -229,7 +229,7 @@ const firePerim1800N_2 = createPerimeter1800NLayer(2);
 
 // Additional GeoJSON (1800L_S)
 const emberLayer1800S = new GeoJSONLayer({
-url: localUrl("./Lahaina_20230808T1800L_S_emberspread.geojson"),
+url: localUrl("./20230808T1800/Lahaina_20230808T1800L_S_emberspread.geojson"),
 title: "Ember Spread 1800S",
 renderer: {
 type: "simple",
@@ -245,7 +245,7 @@ popupEnabled: true
 
 function createPerimeter1800SLayer(idx) {
 return new GeoJSONLayer({
-  url: localUrl(`./Lahaina_20230808T1800L_S_fireperim_${idx}.geojson`),
+  url: localUrl(`./20230808T1800/Lahaina_20230808T1800L_S_fireperim_${idx}.geojson`),
   title: `Fire Perimeter 1800S - ${idx}`,
   renderer: {
     type: "simple",
@@ -266,53 +266,53 @@ const firePerim1800S_3 = createPerimeter1800SLayer(3);
 
 // Additional KML (1700, 1800, 1900)
 const kml1700_10 = new KMLLayer({
-url: localUrl("./land_data_dem_point_08-08-2023_1700_30m_10_meters_agl.kml"),
+url: localUrl("./20230808T1700/land_data_dem_point_08-08-2023_1700_30m_10_meters_agl.kml"),
 title: "DEM Points 1700 - 10m AGL"
 });
 
 const kml1700_80 = new KMLLayer({
-url: localUrl("./land_data_dem_point_08-08-2023_1700_30m_80_meters_agl.kml"),
+url: localUrl("./20230808T1700/land_data_dem_point_08-08-2023_1700_30m_80_meters_agl.kml"),
 title: "DEM Points 1700 - 80m AGL"
 });
 
 const kml1800_10 = new KMLLayer({
-url: localUrl("./land_data_dem_point_08-08-2023_1800_30m_10_meters_agl.kml"),
+url: localUrl("./20230808T1800/land_data_dem_point_08-08-2023_1800_30m_10_meters_agl.kml"),
 title: "DEM Points 1800 - 10m AGL"
 });
 
 const kml1800_80 = new KMLLayer({
-url: localUrl("./land_data_dem_point_08-08-2023_1800_30m_80_meters_agl.kml"),
+url: localUrl("./20230808T1800/land_data_dem_point_08-08-2023_1800_30m_80_meters_agl.kml"),
 title: "DEM Points 1800 - 80m AGL"
 });
 
 const kml1900_10 = new KMLLayer({
-url: localUrl("./land_data_dem_point_08-08-2023_1900_30m_10_meters_agl.kml"),
+url: localUrl("./20230808T1900/land_data_dem_point_08-08-2023_1900_30m_10_meters_agl.kml"),
 title: "DEM Points 1900 - 10m AGL"
 });
 
 const kml1900_80 = new KMLLayer({
-url: localUrl("./land_data_dem_point_08-08-2023_1900_30m_80_meters_agl.kml"),
+url: localUrl("./20230808T1900/land_data_dem_point_08-08-2023_1900_30m_80_meters_agl.kml"),
 title: "DEM Points 1900 - 80m AGL"
 });
 
 // Additional KML (2000, 2100)
 const kml2000_10 = new KMLLayer({
-url: localUrl("./land_data_dem_point_08-08-2023_2000_30m_10_meters_agl.kml"),
+url: localUrl("./20230808T2000/land_data_dem_point_08-08-2023_2000_30m_10_meters_agl.kml"),
 title: "DEM Points 2000 - 10m AGL"
 });
 
 const kml2000_80 = new KMLLayer({
-url: localUrl("./land_data_dem_point_08-08-2023_2000_30m_80_meters_agl.kml"),
+url: localUrl("./20230808T2000/land_data_dem_point_08-08-2023_2000_30m_80_meters_agl.kml"),
 title: "DEM Points 2000 - 80m AGL"
 });
 
 const kml2100_10 = new KMLLayer({
-url: localUrl("./land_data_dem_point_08-08-2023_2100_30m_10_meters_agl.kml"),
+url: localUrl("./20230808T2100/land_data_dem_point_08-08-2023_2100_30m_10_meters_agl.kml"),
 title: "DEM Points 2100 - 10m AGL"
 });
 
 const kml2100_80 = new KMLLayer({
-url: localUrl("./land_data_dem_point_08-08-2023_2100_30m_80_meters_agl.kml"),
+url: localUrl("./20230808T2100/land_data_dem_point_08-08-2023_2100_30m_80_meters_agl.kml"),
 title: "DEM Points 2100 - 80m AGL"
 });
 
