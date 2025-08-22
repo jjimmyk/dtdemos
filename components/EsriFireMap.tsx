@@ -6,7 +6,7 @@ interface EsriFireMapProps {
 }
 
 export function EsriFireMap({ className }: EsriFireMapProps) {
-  const skytlSrc = encodeURI('/SkyTL Data 82125/index.html');
+  const skytlSrc = encodeURI('/SkyTL Data 82125/index.html') + '?v=2';
 
   return (
     <div className={`bg-card rounded-lg overflow-hidden ${className}`}>
