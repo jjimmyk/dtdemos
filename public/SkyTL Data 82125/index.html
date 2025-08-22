@@ -512,6 +512,38 @@ function buildGeoJsonNames(timeKey){
   return [ember].concat(perims);
 }
 
+// Return only files we actually deploy for Fire Behavior (avoids 404s on Vercel)
+function filesForFireFolder(folderKey){
+  if (folderKey === '20230808T1530'){
+    return [
+      'Lahaina_20230808T1530L_emberspread.geojson',
+      'Lahaina_20230808T1530L_fireperim_0.geojson',
+      'Lahaina_20230808T1530L_fireperim_1.geojson'
+    ];
+  }
+  if (folderKey === '20230808T1700'){
+    var list = ['Lahaina_20230808T1700L_emberspread.geojson'];
+    for (var i=0;i<=6;i++){ list.push('Lahaina_20230808T1700L_fireperim_'+i+'.geojson'); }
+    return list;
+  }
+  if (folderKey === '20230808T1800'){
+    var list1800 = [
+      'Lahaina_20230808T1800L_N_emberspread.geojson',
+      'Lahaina_20230808T1800L_N_fireperim_0.geojson',
+      'Lahaina_20230808T1800L_N_fireperim_1.geojson',
+      'Lahaina_20230808T1800L_N_fireperim_2.geojson',
+      'Lahaina_20230808T1800L_S_emberspread.geojson',
+      'Lahaina_20230808T1800L_S_fireperim_0.geojson',
+      'Lahaina_20230808T1800L_S_fireperim_1.geojson',
+      'Lahaina_20230808T1800L_S_fireperim_2.geojson',
+      'Lahaina_20230808T1800L_S_fireperim_3.geojson'
+    ];
+    return list1800;
+  }
+  // Fallback: original generator (kept for local dev completeness)
+  return buildGeoJsonNames(folderKey.replace('_','T'));
+}
+
 function exists(url){
   return fetch(url, { method: "GET", cache: "no-store" })
     .then(function(r){
@@ -594,14 +626,7 @@ function selectFolder(folderKey){
     "land_data_dem_point_08-08-2023_"+folderKey.slice(-4)+"_30m_10_meters_agl.kml",
     "land_data_dem_point_08-08-2023_"+folderKey.slice(-4)+"_30m_80_meters_agl.kml"
   ];
-  var variants = ["L_", "L_N_", "L_S_"]; // support N/S variants
-  var gjNames = [];
-  variants.forEach(function(mid){
-    gjNames.push("Lahaina_"+folderKey+mid+"emberspread.geojson");
-    for (var i=0;i<=8;i++){
-      gjNames.push("Lahaina_"+folderKey+mid+"fireperim_"+i+".geojson");
-    }
-  });
+  var gjNames = filesForFireFolder(folderKey);
   var all = kmlNames.concat(gjNames);
   var urls = all.map(function(n){ return localUrl("./"+folderKey+"/"+n); });
   var checks = urls.map(function(u){ return exists(u).then(function(ok){ return { url: u, ok: ok }; }); });
