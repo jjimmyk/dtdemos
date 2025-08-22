@@ -521,7 +521,7 @@ function filesForFireFolder(folderKey){
       'Lahaina_20230808T1530L_fireperim_1.geojson'
     ];
   }
-  if (folderKey === '20230808T1700'){
+  if (folderKey === '20230808T1630'){
     var list = ['Lahaina_20230808T1700L_emberspread.geojson'];
     for (var i=0;i<=6;i++){ list.push('Lahaina_20230808T1700L_fireperim_'+i+'.geojson'); }
     return list;
@@ -628,7 +628,7 @@ function selectFolder(folderKey){
   ];
   var gjNames = filesForFireFolder(folderKey);
   var all = kmlNames.concat(gjNames);
-  var urls = all.map(function(n){ return localUrl("./"+folderKey+"/"+n); });
+  var urls = all.map(function(n){ return localUrl("./fireBehavior_original/"+folderKey+"/"+n); });
   var checks = urls.map(function(u){ return exists(u).then(function(ok){ return { url: u, ok: ok }; }); });
   Promise.all(checks).then(function(results){
     var valid = results.filter(function(r){ return r.ok; }).map(function(r){ return r.url; });
@@ -1088,7 +1088,7 @@ function fireKeyToLabel(key){
 function populateFireSelect(){
   if (!fireSelectEl) return;
   fireSelectEl.innerHTML = '';
-  var allowed = ['20230808T1530','20230808T1700','20230808T1800'];
+  var allowed = ['20230808T1530','20230808T1630','20230808T1800'];
   allowed.forEach(function(k){
     var opt = document.createElement('option');
     opt.value = k; opt.textContent = fireKeyToLabel(k);
@@ -1103,6 +1103,20 @@ function populateFireSelect(){
 if (fireSelectEl) {
   fireSelectEl.addEventListener('change', function(){ selectFolder(this.value); });
 }
+
+// Show Fire time dropdown on initial page load by default
+(function initFireModeOnLoad(){
+  try {
+    document.getElementById('timeButtons').style.display = 'none';
+    document.getElementById('fireSelectContainer').style.display = 'block';
+    document.getElementById('riskSelectContainer').style.display = 'none';
+    document.getElementById('windSelectContainer').style.display = 'none';
+    renderRiskStats(null);
+    if (legend) { legend.visible = true; if (!view.ui.find(legend)) { view.ui.add(legend, 'bottom-right'); } }
+    if (layerList && !view.ui.find(layerList)) { view.ui.add(layerList, 'top-right'); }
+    populateFireSelect();
+  } catch(e){ console.warn('initFireModeOnLoad:', e); }
+})();
 
 });
 </script>
