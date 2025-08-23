@@ -7,7 +7,17 @@ interface EsriFireMapProps {
 
 export function EsriFireMap({ className }: EsriFireMapProps) {
   const baseUrl = (import.meta as any).env.BASE_URL || '/';
-  const skytlSrc = `${baseUrl}${encodeURI('SkyTL Data 82125/index.html')}?v=2`;
+  // Cache-bust to ensure latest embedded HTML is loaded on Vercel
+  const versionParam = React.useMemo(() => {
+    const env = (import.meta as any).env || {};
+    return (
+      env.VITE_APP_VERSION ||
+      env.VITE_COMMIT_SHA ||
+      env.VITE_BUILD_ID ||
+      String(Date.now())
+    );
+  }, []);
+  const skytlSrc = `${baseUrl}${encodeURI('SkyTL Data 82125/index.html')}?v=${encodeURIComponent(versionParam)}`;
 
   return (
     <div className={`bg-card rounded-lg overflow-hidden ${className}`}>

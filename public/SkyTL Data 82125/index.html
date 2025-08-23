@@ -627,6 +627,42 @@ function showLoading(msg){ console.log(msg || 'Loading time...'); }
 
 function selectFolder(folderKey){
   showLoading("Selecting folder "+folderKey);
+  // Special case: when selecting 18:00, also render 16:30 layers
+  if (folderKey === '20230808T1800'){
+    var folders = ['20230808T1800', '20230808T1630'];
+    var urls1800and1630 = [];
+    folders.forEach(function(fk){
+      var kml = [
+        "land_data_dem_point_08-08-2023_"+fk.slice(-4)+"_30m_10_meters_agl.kml",
+        "land_data_dem_point_08-08-2023_"+fk.slice(-4)+"_30m_80_meters_agl.kml"
+      ];
+      var gj = filesForFireFolder(fk);
+      var allNames = kml.concat(gj);
+      var fkUrls = allNames.map(function(n){ return localUrl("./fireBehavior_original/"+fk+"/"+n); });
+      urls1800and1630 = urls1800and1630.concat(fkUrls);
+    });
+    var checksAll = urls1800and1630.map(function(u){ return exists(u).then(function(ok){ return { url: u, ok: ok }; }); });
+    Promise.all(checksAll).then(function(results){
+      var valid = results.filter(function(r){ return r.ok; }).map(function(r){ return r.url; });
+      map.removeAll();
+      var newLayers = valid.map(createLayerFor).filter(Boolean);
+      if (newLayers.length){
+        map.addMany(newLayers);
+        var whenAll = Promise.all(newLayers.map(function(l){ return l.when(); }));
+        whenAll.then(function(){
+          var full = null;
+          newLayers.forEach(function(l){ if (l.fullExtent) full = full ? full.union(l.fullExtent) : l.fullExtent; });
+          if (full) { view.goTo(full.expand(1.2)).catch(function(e){ console.warn("goTo:", e); }); }
+        });
+        newLayers.forEach(applyPopupTemplateIfGeo);
+        try {
+          var hasGeo = newLayers.some(function(l){ return l.declaredClass && l.declaredClass.indexOf('GeoJSONLayer') !== -1; });
+          legend.visible = hasGeo;
+        } catch(e) { console.warn('legend toggle failed', e); }
+      }
+    });
+    return;
+  }
   var kmlNames = [
     "land_data_dem_point_08-08-2023_"+folderKey.slice(-4)+"_30m_10_meters_agl.kml",
     "land_data_dem_point_08-08-2023_"+folderKey.slice(-4)+"_30m_80_meters_agl.kml"
@@ -692,14 +728,15 @@ var riskSelectEl = document.getElementById('riskSelect');
 var fireSelectEl = document.getElementById('fireSelect');
 
 function listCandidateRiskKeys(){
-  // Explicit list of available risk files (21 options)
+  // Restricted set of allowed risk times per requirements
   return [
-    '20230807_1800','20230807_1900','20230807_2000','20230807_2100','20230807_2200','20230807_2300',
-    '20230808_0000','20230808_0300','20230808_0600','20230808_1000','20230808_1400','20230808_1800',
-    '20230809_0000','20230809_0600','20230809_1200','20230809_1800',
+    '20230807_2200',
+    '20230808_0300',
+    '20230808_1400',
+    '20230809_1800',
     '20230810_1800',
-    '20230811_0600','20230811_1800',
-    '20230812_0600','20230812_1800'
+    '20230811_1800',
+    '20230812_1800'
   ];
 }
 
